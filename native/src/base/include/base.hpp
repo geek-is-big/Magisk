@@ -4,9 +4,21 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <cstring>
 #include <functional>
+#include <memory>
 
 #include <rust/cxx.h>
+
+#ifndef __printflike
+#define __printflike(a, b) __attribute__((format(printf, a, b)))
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__ANDROID__)
+#define MAGISK_CXX_INLINE
+#else
+#define MAGISK_CXX_INLINE [[gnu::always_inline]]
+#endif
 
 void LOGD(const char *fmt, ...) __printflike(1, 2);
 void LOGI(const char *fmt, ...) __printflike(1, 2);
@@ -120,6 +132,7 @@ struct byte_view {
 
     // byte_view, or any of its subclasses, can be copied as byte_view
     byte_view(const byte_view &o) : ptr(o.ptr), sz(o.sz) {}
+    byte_view &operator=(const byte_view &o) = default;
 
     // Transparent conversion to Rust slice
     byte_view(const ByteSlice o) : byte_view(o.data(), o.size()) {}

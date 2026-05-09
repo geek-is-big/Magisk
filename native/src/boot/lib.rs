@@ -19,6 +19,8 @@ mod payload;
 mod proto;
 mod sign;
 
+pub use cli::run;
+
 #[cxx::bridge]
 pub mod ffi {
     enum FileFormat {

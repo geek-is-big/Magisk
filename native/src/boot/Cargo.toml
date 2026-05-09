@@ -3,14 +3,23 @@ name = "magiskboot"
 version.workspace = true
 edition.workspace = true
 
+[features]
+native = []
+
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "rlib"]
 path = "lib.rs"
+
+[[bin]]
+name = "magiskboot"
+path = "main.rs"
+required-features = ["native"]
 
 [lints]
 workspace = true
 
 [build-dependencies]
+cc = { workspace = true }
 cxx-gen = { workspace = true }
 pb-rs = { workspace = true }
 

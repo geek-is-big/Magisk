@@ -15,6 +15,7 @@ derive = { path = "base/derive" }
 magiskpolicy = { path = "sepolicy" }
 cxx = { path = "external/cxx-rs" }
 cxx-gen = { path = "external/cxx-rs/gen/lib" }
+cc = "1.2.59"
 libc = "0.2.184"
 cfg-if = "1.0.4"
 num-traits = "0.2.19"

@@ -698,6 +698,7 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "bzip2",
+ "cc",
  "cxx",
  "cxx-gen",
  "der",

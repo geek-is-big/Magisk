@@ -1,7 +1,15 @@
 #include <sys/wait.h>
 #include <sys/prctl.h>
 #include <sys/mman.h>
+#include <cstdarg>
+#ifdef __ANDROID__
 #include <android/log.h>
+#else
+#define ANDROID_LOG_DEBUG 3
+#define ANDROID_LOG_INFO  4
+#define ANDROID_LOG_WARN  5
+#define ANDROID_LOG_ERROR 6
+#endif
 #include <linux/fs.h>
 #include <syscall.h>
 
@@ -14,6 +22,23 @@ using namespace std;
 #define __call_bypassing_fortify(fn) (&fn)
 #endif
 
+#ifndef __ANDROID__
+#undef strlcpy
+static size_t magisk_strlcpy(char *dest, const char *src, size_t size) {
+#if defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 38)
+    return strlcpy(dest, src, size);
+#else
+    size_t len = strlen(src);
+    if (size != 0) {
+        size_t copy = std::min(len, size - 1);
+        memcpy(dest, src, copy);
+        dest[copy] = '\0';
+    }
+    return len;
+#endif
+}
+#endif
+
 #ifdef __LP64__
 static_assert(BLKGETSIZE64 == 0x80081272);
 #else
@@ -24,8 +49,10 @@ static_assert(BLKGETSIZE64 == 0x80041272);
 
 void* operator new(std::size_t s) { return std::malloc(s); }
 void* operator new[](std::size_t s) { return std::malloc(s); }
-void  operator delete(void *p) { std::free(p); }
-void  operator delete[](void *p) { std::free(p); }
+void  operator delete(void *p) noexcept { std::free(p); }
+void  operator delete[](void *p) noexcept { std::free(p); }
+void  operator delete(void *p, std::size_t) noexcept { std::free(p); }
+void  operator delete[](void *p, std::size_t) noexcept { std::free(p); }
 void* operator new(std::size_t s, const std::nothrow_t&) noexcept { return std::malloc(s); }
 void* operator new[](std::size_t s, const std::nothrow_t&) noexcept { return std::malloc(s); }
 void  operator delete(void *p, const std::nothrow_t&) noexcept { std::free(p); }
@@ -253,7 +280,11 @@ int ssprintf(char *dest, size_t size, const char *fmt, ...) {
 
 #undef strlcpy
 size_t strscpy(char *dest, const char *src, size_t size) {
+#ifdef __ANDROID__
     return std::min(strlcpy(dest, src, size), size - 1);
+#else
+    return std::min(magisk_strlcpy(dest, src, size), size - 1);
+#endif
 }
 
 #undef vsnprintf

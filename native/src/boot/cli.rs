@@ -12,9 +12,10 @@ use base::{
     CmdArgs, EarlyExitExt, LoggedResult, MappedFile, PositionalArgParser, ResultExt, Utf8CStr,
     Utf8CString, WriteExt, argh, cmdline_logging, cstr, log_err,
 };
-use std::ffi::c_char;
 use std::io::{Seek, SeekFrom, Write};
 use std::str::FromStr;
+#[cfg(not(feature = "native"))]
+use std::ffi::c_char;
 
 #[derive(FromArgs)]
 struct Cli {
@@ -437,10 +438,14 @@ fn boot_main(cmds: CmdArgs) -> LoggedResult<i32> {
     Ok(0)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn main(argc: i32, argv: *const *const c_char, _envp: *const *const c_char) -> i32 {
+pub fn run(cmds: CmdArgs) -> i32 {
     cmdline_logging();
     unsafe { umask(0) };
-    let cmds = CmdArgs::new(argc, argv);
     boot_main(cmds).unwrap_or(1)
+}
+
+#[cfg(not(feature = "native"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn main(argc: i32, argv: *const *const c_char, _envp: *const *const c_char) -> i32 {
+    run(CmdArgs::new(argc, argv))
 }

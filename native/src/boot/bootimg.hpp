@@ -3,7 +3,36 @@
 #include <cstdint>
 #include <utility>
 #include <bitset>
+#include <cstring>
+#include <memory>
+#if __has_include(<span>)
+#include <span>
+#else
+namespace std {
+template <class T>
+class span {
+public:
+    span() : ptr(nullptr), len(0) {}
+    span(T *ptr, size_t len) : ptr(ptr), len(len) {}
+    T *begin() const { return ptr; }
+    T *end() const { return ptr + len; }
+    T *data() const { return ptr; }
+    size_t size() const { return len; }
+    T &operator[](size_t i) const { return ptr[i]; }
+
+private:
+    T *ptr;
+    size_t len;
+};
+}
+#endif
 #include <rust/cxx.h>
+
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__ANDROID__)
+#define MAGISK_PACKED
+#else
+#define MAGISK_PACKED __attribute__((packed))
+#endif
 
 /******************
  * Special Headers
@@ -15,7 +44,7 @@ struct mtk_hdr {
     char name[32];          /* The type of the header */
 
     char padding[472];      /* Padding to 512 bytes */
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct dhtb_hdr {
     char magic[8];          /* DHTB magic */
@@ -23,7 +52,7 @@ struct dhtb_hdr {
     uint32_t size;          /* Payload size, whole image + SEANDROIDENFORCE + 0xFFFFFFFF */
 
     char padding[460];      /* Padding to 512 bytes */
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct blob_hdr {
     char secure_magic[20];  /* "-SIGNED-BY-SIGNBLOB-" */
@@ -39,7 +68,7 @@ struct blob_hdr {
     uint32_t offset;        /* offset in blob where this partition starts */
     uint32_t size;          /* Size of data */
     uint32_t version;       /* 0x00000001 */
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct zimage_hdr {
     uint32_t code[9];
@@ -48,7 +77,7 @@ struct zimage_hdr {
     uint32_t end;        /* zImage end address */
     uint32_t endian;     /* endianness flag */
     // There could be more fields, but we don't care
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 /**************
  * AVB Headers
@@ -67,7 +96,7 @@ struct AvbFooter {
     uint64_t vbmeta_offset;
     uint64_t vbmeta_size;
     uint8_t reserved[28];
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 // https://android.googlesource.com/platform/external/avb/+/refs/heads/android11-release/libavb/avb_vbmeta_image.h
 struct AvbVBMetaImageHeader {
@@ -92,7 +121,7 @@ struct AvbVBMetaImageHeader {
     uint32_t rollback_index_location;
     uint8_t release_string[AVB_RELEASE_STRING_SIZE];
     uint8_t reserved[80];
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 /*********************
  * Boot Image Headers
@@ -153,7 +182,7 @@ struct boot_img_hdr_v0_common {
 
     uint32_t second_size;  /* size in bytes */
     uint32_t second_addr;  /* physical load addr */
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct boot_img_hdr_v0 : public boot_img_hdr_v0_common {
     uint32_t tags_addr;    /* physical addr for kernel tags */
@@ -188,18 +217,18 @@ struct boot_img_hdr_v0 : public boot_img_hdr_v0_common {
     // Supplemental command line data; kept here to maintain
     // binary compatibility with older versions of mkbootimg.
     char extra_cmdline[BOOT_EXTRA_ARGS_SIZE];
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct boot_img_hdr_v1 : public boot_img_hdr_v0 {
     uint32_t recovery_dtbo_size;    /* size in bytes for recovery DTBO/ACPIO image */
     uint64_t recovery_dtbo_offset;  /* offset to recovery dtbo/acpio in boot image */
     uint32_t header_size;
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct boot_img_hdr_v2 : public boot_img_hdr_v1 {
     uint32_t dtb_size;  /* size in bytes for DTB image */
     uint64_t dtb_addr;  /* physical load address for DTB image */
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 // Special Samsung header
 struct boot_img_hdr_pxa : public boot_img_hdr_v0_common {
@@ -213,7 +242,7 @@ struct boot_img_hdr_pxa : public boot_img_hdr_v0_common {
     char id[BOOT_ID_SIZE]; /* timestamp / checksum / sha1 / etc */
 
     char extra_cmdline[BOOT_EXTRA_ARGS_SIZE];
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 /*
  * When the boot image header has a version of 3 - 4, the structure of the boot
@@ -300,7 +329,7 @@ struct boot_img_hdr_v3 {
     uint32_t header_version;
 
     char cmdline[BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE];
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct boot_img_hdr_vnd_v3 {
     // Must be VENDOR_BOOT_MAGIC.
@@ -317,18 +346,18 @@ struct boot_img_hdr_vnd_v3 {
     uint32_t header_size;
     uint32_t dtb_size;      /* size in bytes for DTB image */
     uint64_t dtb_addr;      /* physical load address for DTB image */
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct boot_img_hdr_v4 : public boot_img_hdr_v3 {
     uint32_t signature_size; /* size in bytes */
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct boot_img_hdr_vnd_v4 : public boot_img_hdr_vnd_v3 {
     uint32_t vendor_ramdisk_table_size;       /* size in bytes for the vendor ramdisk table */
     uint32_t vendor_ramdisk_table_entry_num;  /* number of entries in the vendor ramdisk table */
     uint32_t vendor_ramdisk_table_entry_size; /* size in bytes for a vendor ramdisk table entry */
     uint32_t bootconfig_size; /* size in bytes for the bootconfig section */
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 struct vendor_ramdisk_table_entry_v4 {
     uint32_t ramdisk_size;   /* size in bytes for the ramdisk image */
@@ -339,7 +368,7 @@ struct vendor_ramdisk_table_entry_v4 {
     // Hardware identifiers describing the board, soc or platform which this
     // ramdisk is intended to be loaded on.
     uint32_t board_id[VENDOR_RAMDISK_TABLE_ENTRY_BOARD_ID_SIZE];
-} __attribute__((packed));
+} MAGISK_PACKED;
 
 /*******************************
  * Polymorphic Universal Header

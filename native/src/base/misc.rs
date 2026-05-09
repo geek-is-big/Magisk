@@ -10,7 +10,18 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 use std::{fmt, slice, str};
 
 pub fn errno() -> &'static mut i32 {
-    unsafe { &mut *libc::__errno() }
+    #[cfg(target_os = "android")]
+    unsafe {
+        &mut *libc::__errno()
+    }
+    #[cfg(target_os = "linux")]
+    unsafe {
+        &mut *libc::__errno_location()
+    }
+    #[cfg(target_os = "macos")]
+    unsafe {
+        &mut *libc::__error()
+    }
 }
 
 // When len is 0, don't care whether buf is null or not

@@ -1,7 +1,6 @@
 #include <bit>
 #include <functional>
 #include <memory>
-#include <span>
 
 #include <base.hpp>
 
@@ -249,12 +248,7 @@ struct [[gnu::packed]] fdt_header {
         uint32_t byte3: 8;
 
         constexpr operator uint32_t() const {
-            return bit_cast<uint32_t>(fdt32_t {
-                .byte0 = byte3,
-                .byte1 = byte2,
-                .byte2 = byte1,
-                .byte3 = byte0
-            });
+            return (byte3) | (byte2 << 8) | (byte1 << 16) | (byte0 << 24);
         }
     };
 
@@ -822,7 +816,8 @@ void repack(Utf8CStr src_img, Utf8CStr out_img, bool skip_comp) {
 
     if (boot.hdr->vendor_ramdisk_table_size()) {
         // Create a copy so we can modify it
-        ramdisk_table.assign_range(boot.vendor_ramdisk_tbl());
+        auto table = boot.vendor_ramdisk_tbl();
+        ramdisk_table.assign(table.begin(), table.end());
 
         owned_fd dirfd = xopen(VND_RAMDISK_DIR, O_RDONLY | O_CLOEXEC);
         uint32_t ramdisk_offset = 0;
@@ -941,7 +936,7 @@ void repack(Utf8CStr src_img, Utf8CStr out_img, bool skip_comp) {
     // Pad image to original size if not chromeos (as it requires post processing)
     if (!boot.flags[CHROMEOS_FLAG]) {
         off_t current = lseek(fd, 0, SEEK_CUR);
-        if (current < boot.map.size()) {
+        if (current >= 0 && static_cast<size_t>(current) < boot.map.size()) {
             write_zero(fd, boot.map.size() - current);
         }
     }
